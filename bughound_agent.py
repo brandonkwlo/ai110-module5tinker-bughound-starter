@@ -125,8 +125,11 @@ class BugHoundAgent:
     # ----------------------------
     def _heuristic_analyze(self, code: str) -> List[Dict[str, str]]:
         issues: List[Dict[str, str]] = []
+        # Scan docstring-masked text so illustrative code inside a triple-quoted
+        # string (e.g. "Example: except: ...") isn't mistaken for live code.
+        scan_text = self._mask_string_literals(code)
 
-        if "print(" in code:
+        if "print(" in scan_text:
             issues.append(
                 {
                     "type": "Code Quality",
@@ -135,7 +138,7 @@ class BugHoundAgent:
                 }
             )
 
-        if re.search(r"\bexcept\s*:\s*(\n|#|$)", code):
+        if re.search(r"\bexcept\s*:\s*(\n|#|$)", scan_text):
             issues.append(
                 {
                     "type": "Reliability",
@@ -144,7 +147,7 @@ class BugHoundAgent:
                 }
             )
 
-        if "TODO" in code:
+        if "TODO" in scan_text:
             issues.append(
                 {
                     "type": "Maintainability",
@@ -154,6 +157,17 @@ class BugHoundAgent:
             )
 
         return issues
+
+    def _mask_string_literals(self, code: str) -> str:
+        # Blanks the contents of triple-quoted strings (the standard docstring form)
+        # so regex heuristics don't fire on illustrative code inside documentation.
+        # Single/double-quoted string literals are not masked (not our observed case).
+        def _blank(match: "re.Match[str]") -> str:
+            quote = match.group(1)
+            inner = re.sub(r"[^\n]", " ", match.group(2))
+            return f"{quote}{inner}{quote}"
+
+        return re.sub(r"('''|\"\"\")(.*?)\1", _blank, code, flags=re.DOTALL)
 
     def _heuristic_fix(self, code: str, issues: List[Dict[str, str]]) -> str:
         fixed = code
@@ -175,26 +189,48 @@ class BugHoundAgent:
         text = text.strip()
         parsed = self._try_json_loads(text)
         if isinstance(parsed, list):
-            return self._normalize_issues(parsed)
+            return self._validate_parsed_issues(parsed)
 
         array_str = self._extract_first_json_array(text)
         if array_str:
             parsed2 = self._try_json_loads(array_str)
             if isinstance(parsed2, list):
-                return self._normalize_issues(parsed2)
+                return self._validate_parsed_issues(parsed2)
 
         return None
 
+    def _validate_parsed_issues(self, arr: List[Any]) -> Optional[List[Dict[str, str]]]:
+        # A genuinely empty array is a meaningful "no issues found" result.
+        if not arr:
+            return []
+
+        # A non-empty array where every item fails content validation (e.g. missing
+        # msg, bogus severity) is untrustworthy, even though it parsed as valid JSON.
+        # Treat it the same as unparseable output so the caller falls back to heuristics.
+        issues = self._normalize_issues(arr)
+        if not issues:
+            return None
+
+        return issues
+
     def _normalize_issues(self, arr: List[Any]) -> List[Dict[str, str]]:
+        valid_severities = {"low", "medium", "high"}
         issues: List[Dict[str, str]] = []
         for item in arr:
             if not isinstance(item, dict):
                 continue
+
+            severity = str(item.get("severity", "")).strip()
+            msg = str(item.get("msg", "")).strip()
+
+            if severity.lower() not in valid_severities or not msg:
+                continue
+
             issues.append(
                 {
                     "type": str(item.get("type", "Issue")),
-                    "severity": str(item.get("severity", "Unknown")),
-                    "msg": str(item.get("msg", "")).strip(),
+                    "severity": severity,
+                    "msg": msg,
                 }
             )
         return issues

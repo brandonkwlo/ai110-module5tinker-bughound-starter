@@ -80,7 +80,12 @@ def assess_risk(
     # ----------------------------
     # Auto-fix policy
     # ----------------------------
-    should_autofix = level == "low"
+    # A Medium/High severity issue should never be auto-applied, even if the
+    # score alone would still land in the "low" risk band.
+    has_elevated_severity = any(
+        str(issue.get("severity", "")).lower() in ("medium", "high") for issue in issues
+    )
+    should_autofix = level == "low" and not has_elevated_severity
 
     if not reasons:
         reasons.append("No significant risks detected.")

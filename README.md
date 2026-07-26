@@ -8,22 +8,22 @@ BugHound is a small, agent-style debugging tool. It analyzes a Python code snipp
 
 Given a short Python snippet, BugHound:
 
-1. **Analyzes** the code for potential issues  
-   - Uses heuristics in offline mode  
-   - Uses Gemini when API access is enabled  
+1. **Analyzes** the code for potential issues
+   - Uses heuristics in offline mode
+   - Uses Gemini when API access is enabled
 
-2. **Proposes a fix**  
-   - Either heuristic-based or LLM-generated  
-   - Attempts minimal, behavior-preserving changes  
+2. **Proposes a fix**
+   - Either heuristic-based or LLM-generated
+   - Attempts minimal, behavior-preserving changes
 
-3. **Assesses risk**  
-   - Scores the fix  
-   - Flags high-risk changes  
-   - Decides whether the fix should be auto-applied or reviewed by a human  
+3. **Assesses risk**
+   - Scores the fix
+   - Flags high-risk changes
+   - Decides whether the fix should be auto-applied or reviewed by a human
 
-4. **Shows its work**  
-   - Displays detected issues  
-   - Shows a diff between original and fixed code  
+4. **Shows its work**
+   - Displays detected issues
+   - Shows a diff between original and fixed code
    - Logs each agent step
 
 ---
@@ -57,7 +57,7 @@ streamlit run bughound_app.py
 
 In the sidebar, select:
 
-* **Model mode:** Heuristic only (no API)
+- **Model mode:** Heuristic only (no API)
 
 This mode uses simple pattern-based rules and is useful for testing the workflow without network access.
 
@@ -87,8 +87,8 @@ streamlit run bughound_app.py
 
 In the sidebar, select:
 
-* **Model mode:** Gemini (requires API key)
-* Choose a Gemini model and temperature
+- **Model mode:** Gemini (requires API key)
+- Choose a Gemini model and temperature
 
 BugHound will now use Gemini for analysis and fix generation, while still applying local reliability checks.
 
@@ -104,6 +104,10 @@ pytest
 
 You should see tests covering:
 
-* Risk scoring and guardrails
-* Heuristic fallbacks when LLM output is invalid
-* End-to-end agent workflow shape
+- Risk scoring and guardrails
+- Heuristic fallbacks when LLM output is invalid
+- End-to-end agent workflow shape
+
+# Bughound Demo
+
+![alt text](image.png)

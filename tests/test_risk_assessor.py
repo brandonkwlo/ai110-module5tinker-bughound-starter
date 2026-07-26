@@ -46,3 +46,15 @@ def test_missing_return_is_penalized():
     )
     assert risk["score"] < 100
     assert any("Return" in r or "return" in r for r in risk["reasons"])
+
+
+def test_medium_severity_issue_alone_blocks_autofix():
+    # Score-only logic would allow this (100 - 20 = 80, still >= 75 "low"),
+    # but a Medium-severity issue should never be silently auto-applied.
+    risk = assess_risk(
+        original_code="def f():\n    return 1\n",
+        fixed_code="def f():\n    return 1\n",
+        issues=[{"type": "Reliability", "severity": "Medium", "msg": "needs review"}],
+    )
+    assert risk["score"] >= 75
+    assert risk["should_autofix"] is False
